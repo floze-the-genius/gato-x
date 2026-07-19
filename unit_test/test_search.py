@@ -46,6 +46,35 @@ async def test_search_api(mock_time):
 
 
 @patch("gatox.github.search.asyncio.sleep")
+async def test_search_api_encodes_custom_query_as_params(mock_time):
+    mock_client = AsyncMock()
+    custom_query = (
+        "org:somecompany lang:yaml path:.github/workflows "
+        "/(issue_comment|pull_request_target|issues:)/"
+    )
+
+    mock_client.call_get.return_value = MagicMock(
+        status_code=200,
+        json=MagicMock(return_value={"items": [], "total_count": 0}),
+        links={},
+    )
+
+    searcher = Search(mock_client)
+
+    await searcher.search_enumeration(custom_query=custom_query)
+
+    mock_client.call_get.assert_awaited_once_with(
+        "/search/code",
+        params={
+            "q": custom_query,
+            "sort": "indexed",
+            "per_page": "100",
+            "page": 1,
+        },
+    )
+
+
+@patch("gatox.github.search.asyncio.sleep")
 async def test_search_api_cap(mock_time, capfd):
     mock_client = AsyncMock()
 
